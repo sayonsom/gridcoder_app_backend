@@ -22,5 +22,6 @@ deploy:
   provider: script
   on:
     branch: master
+  skip_cleanup: true
 
 
