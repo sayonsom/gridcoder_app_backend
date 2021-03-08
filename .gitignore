@@ -1,3 +1,12 @@
 api/node_modules
-client/node_modules
+
 worker/temporary
+.DS_Store
+client/lib/core/metadata.js
+client/lib/core/MetadataBlog.js
+
+client/website/translated_docs
+client/website/build/
+client/website/yarn.lock
+client/website/node_modules
+client/website/i18n/*
