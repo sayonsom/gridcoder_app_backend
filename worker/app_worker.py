@@ -9,6 +9,8 @@ from pathlib import Path
 import os
 import subprocess
 import json
+from google.oauth2 import service_account
+
 
 redis_conn = redis.Redis(host=os.environ['REDIS_HOST'],
                          port=os.environ['REDIS_PORT'],
@@ -31,6 +33,8 @@ firebase = Firebase(config)
 storage_client = storage.Client()
 storage_fb = firebase.storage()
 db = firebase.database()
+credentials = service_account.Credentials.from_service_account_file(
+    'synclabd-firebase-adminsdk-ytj92-85babe429d.json')
 
 
 def file_download(url, test_file_name):
@@ -68,7 +72,14 @@ def run_simulation(this_project_id, owd, start_time, task_id):
         print(f"Creating a local folder: {local_folder}")
         Path(local_folder).mkdir(exist_ok=True)
         os.chdir(local_folder)
-        file_url = blob_glm.generate_signed_url(datetime.timedelta(seconds=300), method='GET')
+        file_url = blob_glm.generate_signed_url(
+            expiration=datetime.timedelta(minutes=10),
+            version='v4',
+            service_account_email='synclabd@appspot.gserviceaccount.com',
+            method="GET",
+            content_type="application/octet-stream",
+            credentials=credentials
+        )
         file_download(file_url, local_name)
         if extension.lower() == 'glm':
             glm_files.append(local_name)
