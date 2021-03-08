@@ -1,0 +1,18 @@
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: dev-gridcoder-com-tls
+spec:
+  secretName: dev-gridcoder-com
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: dev.gridcoder.com
+  dnsNames:
+    - dev.gridcoder.com
+  acme:
+    config:
+      - http01:
+          ingressClass: nginx
+        domains:
+          - dev.gridcoder.com
