@@ -12,6 +12,6 @@ docker push sayonsync/gridcoder-worker:$SHA
 
 kubectl apply -f k8s
 
-kubectl set image deployments/api-deployment api=sayonsync/gridcoder-api:$SHA
-kubectl set image deployments/client-deployment client=sayonsync/gridcoder-client:$SHA
-kubectl set image deployments/worker-deployment worker=sayonsync/gridcoder-worker:$SHA
+kubectl set image deployments/api-deployment api=sayonsync/gridcoder-api:latest
+kubectl set image deployments/client-deployment client=sayonsync/gridcoder-client:latest
+kubectl set image deployments/worker-deployment worker=sayonsync/gridcoder-worker:latest

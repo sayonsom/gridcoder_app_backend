@@ -13,7 +13,3 @@ COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt --use-feature=2020-resolver
 
 CMD ["python3", "app_worker.py"]
-
-#
-#EXPOSE 5002
-#COPY . .
