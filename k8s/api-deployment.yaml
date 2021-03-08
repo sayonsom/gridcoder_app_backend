@@ -22,3 +22,5 @@ spec:
               value: redis-cluster-ip-service
             - name: REDIS_PORT
               value: '6379'
+      imagePullSecrets:
+        - name: regcred
