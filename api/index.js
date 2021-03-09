@@ -26,7 +26,15 @@ app.get('/', (req, res) => {
   res.send('API server is working');
 });
 
-app.post('/testsim', async (req, res) => {
+app.post('/simulate', async (req, res) => {
+  var projectID = req.body["projectID"];
+  var taskID = crypto.randomBytes(16).toString("hex");
+  var starttime = Date.now()
+  redisPublisher.publish('new-task', JSON.stringify({"projectID":projectID, "starttime": starttime, "taskID": taskID}));
+  res.send({ working: true, projectID: projectID, "starttime": starttime, "taskID": taskID  });
+});
+
+app.post('/checkstatus', async (req, res) => {
   var projectID = req.body["projectID"];
   var taskID = crypto.randomBytes(16).toString("hex");
   var starttime = Date.now()

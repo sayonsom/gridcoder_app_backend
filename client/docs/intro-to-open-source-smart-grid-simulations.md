@@ -1,5 +1,5 @@
 ---
-id: doc1
+id: intro-to-open-source-smart-grid-simulations
 title: Introduction to Open Source Smart Grid Simulations
 sidebar_label: Introduction
 ---

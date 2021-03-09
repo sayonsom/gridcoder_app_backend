@@ -1,6 +1,6 @@
 {
   "docs": {
-    "Docusaurus": ["doc1"],
+    "Docusaurus": ["intro-to-open-source-smart-grid-simulations"],
     "First Category": ["doc2"],
     "Second Category": ["doc3"]
   },

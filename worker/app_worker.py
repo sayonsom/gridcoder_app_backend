@@ -37,11 +37,20 @@ credentials = service_account.Credentials.from_service_account_file(
     'synclabd-firebase-adminsdk-ytj92-85babe429d.json')
 
 
-def file_download(url, test_file_name):
-    try:
-        urllib.request.urlretrieve(url, test_file_name)
-    except:
-        breakpoint()
+def file_download(bucket_name, source_blob_name, destination_file_name):
+    """Downloads a blob from the bucket."""
+
+
+    bucket = storage_client.bucket(bucket_name)
+
+    blob = bucket.blob(source_blob_name)
+    blob.download_to_filename(destination_file_name)
+
+    print(
+        "Blob {} downloaded to {}.".format(
+            source_blob_name, destination_file_name
+        )
+    )
 
 
 def files_in_a_project(project_id):
@@ -64,7 +73,6 @@ def run_simulation(this_project_id, owd, start_time, task_id):
 
     for f in files:
         name = f.name
-        blob_glm = bucket.blob(name)
         local_name = name.split("/")[-1]
         extension = local_name.split(".")[1]
         local_folder = "temporary"  # "/".join(name.split("/")[:-1])
@@ -72,15 +80,8 @@ def run_simulation(this_project_id, owd, start_time, task_id):
         print(f"Creating a local folder: {local_folder}")
         Path(local_folder).mkdir(exist_ok=True)
         os.chdir(local_folder)
-        file_url = blob_glm.generate_signed_url(
-            expiration=datetime.timedelta(minutes=10),
-            version='v4',
-            service_account_email='synclabd@appspot.gserviceaccount.com',
-            method="GET",
-            content_type="application/octet-stream",
-            credentials=credentials
-        )
-        file_download(file_url, local_name)
+        f.download_to_filename(local_name)
+
         if extension.lower() == 'glm':
             glm_files.append(local_name)
 
@@ -125,7 +126,7 @@ def run_simulation(this_project_id, owd, start_time, task_id):
 def glm_run(this_task_id, project_id, filename):
     print(os.getcwd())
     # Start a GridLAB-D simulation
-    proc = subprocess.Popen(f'gridlabd {filename} --redirect output:outfile_2.txt', shell=True)
+    proc = subprocess.Popen(f'gridlabd {filename} --redirect output:{project_id}_{this_task_id}_2.txt', shell=True)
     try:
         outs, errs = proc.communicate(timeout=10000)
 
@@ -166,4 +167,5 @@ if __name__ == "__main__":
             start_time = project_data["starttime"]
             task_id = project_data["taskID"]
             start_simulation(project_id, start_time, task_id)
+
 

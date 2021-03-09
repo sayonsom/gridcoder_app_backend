@@ -31,13 +31,11 @@ class Footer extends React.Component {
           </a>
           <div>
             <h5>Docs</h5>
-            <a href={this.docUrl('doc1.html')}>
-              Getting Started (or other categories)
+            <a href={this.docUrl('intro-to-open-source-smart-grid-simulations.html')}>
+              Get Started
             </a>
-            <a href={this.docUrl('doc2.html')}>Guides (or other categories)</a>
-            <a href={this.docUrl('doc3.html')}>
-              API Reference (or other categories)
-            </a>
+            <a href={this.docUrl('api.html')}>Explore the APIs</a>
+
           </div>
           <div>
             <h5>Community</h5>
@@ -87,7 +85,7 @@ class Footer extends React.Component {
                   data-layout="standard"
                   data-share="true"
                   data-width="225"
-                  data-show-faces="false"
+                  data-show-faces="true"
                 />
               </div>
             )}

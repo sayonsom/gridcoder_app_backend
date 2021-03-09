@@ -1,5 +1,5 @@
 ---
-title: New Blog Post
+title: Virtual Controller for Smart Grid Simulations
 author: Blog Author
 authorURL: http://twitter.com/
 authorFBID: 100002976521003
