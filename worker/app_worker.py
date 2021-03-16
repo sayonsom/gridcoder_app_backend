@@ -4,13 +4,13 @@ from firebase import Firebase
 from datetime import datetime
 import glob
 import datetime
+import time
 import urllib.request
 from pathlib import Path
 import os
 import subprocess
 import json
 from google.oauth2 import service_account
-
 
 redis_conn = redis.Redis(host=os.environ['REDIS_HOST'],
                          port=os.environ['REDIS_PORT'],
@@ -39,7 +39,6 @@ credentials = service_account.Credentials.from_service_account_file(
 
 def file_download(bucket_name, source_blob_name, destination_file_name):
     """Downloads a blob from the bucket."""
-
 
     bucket = storage_client.bucket(bucket_name)
 
@@ -87,7 +86,7 @@ def run_simulation(this_project_id, owd, start_time, task_id):
 
     if len(glm_files) > 0:
 
-        data = {'start_time': start_time,
+        data = {'start_time': time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(start_time)),
                 'stop_time': "NA", 'run_time': "In Progress"}
         # update the start time as soon as the simulation starts
         print("this_task_ID = ", this_task_id)
@@ -96,26 +95,36 @@ def run_simulation(this_project_id, owd, start_time, task_id):
         print(all_projects)
         db.child("projects").child(this_project_id).child("runs").child(this_task_id).set(data)
 
-        glm_run(this_task_id, this_project_id, glm_files[0])
-        stop_time = datetime.datetime.now()
-
+        run_time_result = glm_run(this_task_id, this_project_id, glm_files[0])
+        stop_time = time.time()
+        compute_duration = stop_time - start_time
         # Add the stop time, update the status, etc.
         data = {
-            'stop_time': stop_time.strftime("%Y-%m-%d %H:%M:%S")}
+            'run_time': run_time_result,
+            'compute_duration': compute_duration,
+            'stop_time': time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(stop_time))}
         db.child("projects").child(this_project_id).child("runs").child(this_task_id).update(data)
 
+        # Upload all the files to the Project results
+
+        files = glob.glob("*.*")
+
+        for f in files:
+            blob = bucket.blob(f"projects/{this_project_id}/results/{this_task_id}/{f}")
+            blob.upload_from_filename(f)
+
         # All the CSV files generated are to be uploaded to the Google Storage
-        recorder_files = glob.glob("*.csv")
-        print("Recorder Files = ", recorder_files)
-
-        for rf in recorder_files:
-            blob = bucket.blob(f"projects/{this_project_id}/results/{this_task_id}/{rf.replace('.csv', '')}")
-            blob.upload_from_filename(rf)
-
-        # Upload the file upon which the results were based
-        blob = bucket.blob(
-            f"projects/{this_project_id}/results/{this_task_id}/{glm_files[0].replace('.glm', '_GRIDLABD_FILE')}")
-        blob.upload_from_filename(rf)
+        # recorder_files = glob.glob("*.csv")
+        # print("Recorder Files = ", recorder_files)
+        #
+        # for rf in recorder_files:
+        #     blob = bucket.blob(f"projects/{this_project_id}/results/{this_task_id}/{rf}")
+        #     blob.upload_from_filename(rf)
+        #
+        # # Upload the file upon which the results were based
+        # blob = bucket.blob(
+        #     f"projects/{this_project_id}/results/{this_task_id}/{glm_files[0]}")
+        # blob.upload_from_filename(rf)
     else:
         return "No GLM file found"
 
@@ -126,24 +135,22 @@ def run_simulation(this_project_id, owd, start_time, task_id):
 def glm_run(this_task_id, project_id, filename):
     print(os.getcwd())
     # Start a GridLAB-D simulation
-    proc = subprocess.Popen(f'gridlabd {filename} --redirect output:{project_id}_{this_task_id}_2.txt', shell=True)
     try:
-        outs, errs = proc.communicate(timeout=10000)
-
-        # db_entry = Workspace(task_id=this_task_id,status='FINISHED',Std_err=errs,Std_out=outs)
-        # try:
-        #     db.session.add(db_entry)
-        #     db.session.commit()
-        #
-        # except:
-        #     breakpoint()
+        proc = subprocess.check_output(
+            f'gridlabd {filename} --redirect output:outfile.txt --redirect warning:warnings.txt --redirect error:errors.txt',
+            shell=True, stderr=subprocess.STDOUT, timeout=10000)
+        try:
+            if os.path.getsize('./errors.txt') > 0:
+                return "Failed"
+            elif os.path.getsize('./warnings.txt') > 0:
+                return "Completed (Review Warnings)"
+            else:
+                return "Completed"
+        except OSError:
+            return f"Output File Read Error. Email: support@gridcoder.com. Mention Project ID= {project_id}, Task ID={this_task_id}"
     except TimeoutError:
         proc.kill()
-        # outs, errs = proc.communicate()
-        # db_entry = Workspace(task_id=this_task_id, status='ERROR', Std_err=errs, Std_out=outs)
-        # db.session.add(db_entry)
-        # db.session.commit()
-    return "Done"
+        return "Failed"
 
 
 def start_simulation(project_id, start_time, task_id):
@@ -155,12 +162,9 @@ def start_simulation(project_id, start_time, task_id):
 
 
 if __name__ == "__main__":
-    print("joy joy")
     pubsub = redis_conn.pubsub()
     pubsub.subscribe("new-task")
     for message in pubsub.listen():
-        print(message)
-        print("LOL")
         if message.get("type") == "message":
             project_data = json.loads(message.get("data"))
             project_id = project_data["projectID"]
@@ -168,4 +172,7 @@ if __name__ == "__main__":
             task_id = project_data["taskID"]
             start_simulation(project_id, start_time, task_id)
 
-
+    # project_id = "4f0d5097-d66f-46ba-8eb6-dfb129a05c1c"
+    # start_time = 1615898254
+    # task_id = "test-1-tuesday-march-16-2021"
+    # start_simulation(project_id, start_time, task_id)
