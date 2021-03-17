@@ -16,7 +16,8 @@ In the body of the post, we add the project ID
 
 ```
 {
-    "projectID": "4f0d5097-d66f-46ba-8eb6-dfb129a05c1c"
+    "projectID": "12926131-c149-487a-8529-5b836ca37815",
+    "apiKey" : "secret-API-key"
 }
 ```
 

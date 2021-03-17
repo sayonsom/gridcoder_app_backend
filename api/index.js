@@ -37,6 +37,8 @@ admin.initializeApp({
 });
 
 const firestore = admin.firestore();
+const database = admin.database();
+
 //const firebaseConfig = {
 //  apiKey: "AIzaSyAOvaCbz_NpuusIdZAi0BQ4w0OR5r-JIr0",
 //  authDomain: "synclabd.firebaseapp.com",
@@ -87,36 +89,41 @@ app.get('/', (req, res) => {
     });
 
 app.post('/simulate', async (req, res) => {
-  var projectID = req.body["projectID"];
-  var api_key = "oEckcumDhpU5Rf9b1AxYkuKyE0z2" //req.body["apiKey"]
 
-  var docRef = firestore.collection("Users").doc(api_key);
+    var projectID = req.body["projectID"];
+    var api_key = req.body["apiKey"];
 
-  // See https://firebase.google.com/docs/firestore/query-data/get-data#get_a_document
-  docRef.get().then((doc) => {
-      if (doc.exists) {
-          var api_calls_made = doc.data()["API_Calls"]
-          docRef.set(
-            {
-                "API_Calls": api_calls_made+1
+    // Figure out the user id for the Cloud Firestore
+    const apiKeyRef = database.ref("Active_APIs/" + api_key + "/");
+
+    apiKeyRef.on('value', (snapshot) => {
+        const user_id = snapshot.val();
+        const docRef = firestore.collection("Users").doc(user_id);
+
+        // See https://firebase.google.com/docs/firestore/query-data/get-data#get_a_document
+        docRef.get().then((doc) => {
+            if (doc.exists) {
+                var api_calls_made = doc.data()["API_Calls"]
+                docRef.set(
+                    {
+                        "API_Calls": api_calls_made+1
+                    }
+                )
+                const taskID = crypto.randomBytes(16).toString("hex");
+                const starttime = Date.now();
+                redisPublisher.publish('new-task', JSON.stringify({"projectID":projectID, "starttime": starttime, "taskID": taskID}));
+                const response = {working: true, projectID: projectID, "starttime": starttime, "taskID": taskID};
+                return res.status(200).json(response);``
+            } else {
+                return res.status(400).json({"message":"User ID not found."});
             }
-          )
-          var taskID = crypto.randomBytes(16).toString("hex");
-          var starttime = Date.now()
-          redisPublisher.publish('new-task', JSON.stringify({"projectID":projectID, "starttime": starttime, "taskID": taskID}));
-          var response = { working: true, projectID: projectID, "starttime": starttime, "taskID": taskID  }
-          return res.status(200).json(response);
-      } else {
-          return res.status(400).json({"message":"User ID not found."});
-      }
-  }).catch((error) => {
-      return res.status(400).json({"message":"Unable to connect to Firestore."});
-  });
+        }).catch((error) => {
+            return res.status(400).json({"message":"Unable to connect to Firestore."});
+        });
+    });
 
 
 
-
-  res.send();
 });
 
 

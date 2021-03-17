@@ -1,10 +1,8 @@
 {
   "docs": {
     "Docusaurus": ["intro-to-open-source-smart-grid-simulations"],
-    "First Category": ["doc2"],
-    "Second Category": ["doc3"]
+    "Model Conversion": ["model-conversion"]
   },
   "docs-other": {
-    "First Category": ["doc4", "doc5"]
   }
 }
