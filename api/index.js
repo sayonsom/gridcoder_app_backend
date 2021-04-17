@@ -20,7 +20,11 @@ const app = express();
 app.use(helmet());
 
 // using bodyParser to parse JSON bodies into JS objects
-app.use(bodyParser.json());
+// create application/json parser
+var jsonParser = bodyParser.json()
+
+// create application/x-www-form-urlencoded parser
+var urlencodedParser = bodyParser.urlencoded({ extended: false })
 
 // enabling CORS for all requests
 app.use(cors());
@@ -88,7 +92,7 @@ app.get('/', (req, res) => {
       res.send('API server is working.');
     });
 
-app.post('/simulate', async (req, res) => {
+app.post('/simulate', jsonParser, async (req, res) => {
 
     var projectID = req.body["projectID"];
     var api_key = req.body["apiKey"];
@@ -123,18 +127,64 @@ app.post('/simulate', async (req, res) => {
     });
 
 
+});
+
+
+app.post('/getplotkeys', jsonParser, async(req, res) => {
+    // TODO: '/getplotkeys' and '/getdata' API calls can be made more efficient together
+
+    var error = false;
+    var projectID = req.body["projectID"];
+    var runID = req.body["runID"];
+    var bucket = admin.storage().bucket("synclabd.appspot.com");
+    var datafile_path = "projects/" + projectID + "/results/" + runID + "/datafile.json";
+    var datafile = bucket.file(datafile_path)
+    datafile.download(function(err, contents) {
+        if (!err) {
+            var data = JSON.parse(contents);
+            var plotKeys = Object.keys(data);
+            res.status(200).json({"Success": "Finding out the plottables ... Done!", "plotKeys": plotKeys})
+    }
+        else {
+            console.log(err)
+            res.status(400).json({"Error": "While getting list of keys, the datafile.json could not be found or processed. Make sure dataviz API returns 200 status before making this API call."})
+        }
+    });
 
 });
 
 
-app.get('/download', async (req, res) => {
+app.post('/getdata', jsonParser, async(req, res) => {
+    var error = false;
     var projectID = req.body["projectID"];
     var runID = req.body["runID"];
+    var xKey = req.body["xKey"];
+    var yKey = req.body["yKey"];
+    var bucket = admin.storage().bucket("synclabd.appspot.com");
+    var datafile_path = "projects/" + projectID + "/results/" + runID + "/datafile.json";
+    var datafile = bucket.file(datafile_path)
+    datafile.download(function(err, contents) {
+        if (!err) {
+            var data = JSON.parse(contents);
+            res.status(200).json({"Success": "Data received", "xValues": data[xKey], "yValues": data[yKey].toString(), "X": xKey, "Y": yKey})
+    }
+        else {
+            console.log(err)
+            res.status(400).json({"Error": "datafile.json could not be found or processed. Make sure dataviz API returns 200 status before making this API call."})
+        }
+    });
+});
+
+
+app.get('/dataviz', jsonParser, async (req, res) => {
+    var projectID = req.body["projectID"];
+    var runID = req.body["runID"];
+    // TODO: add API key check, and make sure person has access to this project
     var error = false
     var results_path = "projects/" + projectID + "/results/" + runID + "/"
     var bucket = admin.storage().bucket("synclabd.appspot.com");
 
-    var zip = new AdmZip();
+    // redisPublisher.publish('prep-for-data-viz', JSON.stringify({"projectID":projectID, "taskID": taskID}));
 
     bucket.getFiles({
             autoPaginate: false,
@@ -143,16 +193,12 @@ app.get('/download', async (req, res) => {
         }, function(err, files, nextQuery, apiResponse) {
             files.forEach(file => {
                 console.log(file.name)
-                destination_path = "./" + file.name
-                file.download().then(function(data) {
-                    const content = data[0];
-                    zip.addFile(file.name, Buffer.alloc(content.length, content), "Adding files");
-                });
+
 
             });
     });
 
-    zip.writeZip("GRID_CODER_ZIP.zip");
+
 
     if (!error) {
         res.status(200).json({"Success": "All result files downloaded successfully"})
